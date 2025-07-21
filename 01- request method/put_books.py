@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 
 from pydantic import BaseModel
 
@@ -24,24 +24,68 @@ BOOKS = [
     {'title': 'Title Six', 'author': 'Author Two', 'category': 'math'}
 ]
 
-# === 单本创建接口 ===
-@app.post("/books/create_book")
-# create_book 函数需要一个 Book 类型的参数
-async def create_book(new_book: Book): 
-    # BOOKS.append(new_book.dict())
-    BOOKS.append(new_book.model_dump())
-    return {"message": "Book created successfully", "book": new_book}
+
+test_put = [
+    {
+        "title": "Title One",
+        "author": "Author A",
+        "category": "category put A "
+    },
+    {
+        "title": "Title Two",
+        "author": "Author B",
+        "category": "category put B"
+    }
+]
 
 
-# === 新增的批量创建接口 ===
-@app.post("/books/create_books") 
-async def create_books(new_books: List[Book]): 
-    for book in new_books:
-        BOOKS.append(book.model_dump())
+
+
+
+@app.put("/books/update_books")
+async def update_books(books_to_update: List[Book]):
+    # 在每次迭代中，变量 book 成为一个指向 BOOKS 列表中某个字典对象的引用。
+    # books_db_map 的值集合，就是指向 BOOKS 列表中那些原始字典对象的引用集合。这里没有创建任何新的书籍字典。
+    books_db_map = {book.get('title').casefold(): book for book in BOOKS}
+    
+    updated_count = 0
+    not_found_titles = []
+
+    # 遍历传入的待更新书籍列表
+    for book_update in books_to_update:
+        # 找到要更新的原始条目
+        # #当匹配成功时，book_to_modify 这个变量现在也获得了对原始字典的引用。
+        book_to_modify = books_db_map.get(book_update.title.casefold())
         
-    return {"message": f"{len(new_books)} books created successfully."}
+
+        if book_to_modify:
+            # .model_dump() 将 Pydantic 对象转为字典
+            book_to_modify.update(book_update.model_dump())
+            updated_count += 1
+        else:
+            # 没找到，记录下来
+            not_found_titles.append(book_update.title)
+
+    # 构建清晰的响应报告
+    response_message = f"Operation finished. Updated: {updated_count}, Not Found: {len(not_found_titles)}."
+    
+    # 如果所有书都没找到，可以考虑返回 404
+    if updated_count == 0 and not_found_titles:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"message": response_message, "not_found": not_found_titles}
+        )
+        
+    return {
+        "message": response_message,
+        "updated_count": updated_count,
+        "not_found": not_found_titles
+    }
+
 
 
 @app.get("/")
 async def read_all_books():
     return BOOKS
+
+
