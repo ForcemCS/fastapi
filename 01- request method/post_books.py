@@ -27,7 +27,8 @@ BOOKS = [
 @app.post("/books/create_book")
 # create_book 函数需要一个 Book 类型的参数
 async def create_book(new_book: Book): 
-    BOOKS.append(new_book.dict())
+    # BOOKS.append(new_book.dict())
+    BOOKS.append(new_book.model_dump())
     return {"message": "Book created successfully", "book": new_book}
 
 
