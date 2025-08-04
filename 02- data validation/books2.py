@@ -1,4 +1,4 @@
-from fastapi  import FastAPI,HTTPException, status
+from fastapi  import FastAPI,HTTPException, status,Path,Query
 
 from pydantic import BaseModel, Field
 
@@ -60,6 +60,22 @@ BOOKS = [
 async def read_all_books():
     return BOOKS
 
+@app.get("/books/{book_id}", status_code=status.HTTP_200_OK)
+async def read_book(book_id: int):
+    result = [book for book in BOOKS if book.id == book_id]
+    if result:
+        return result[-1]
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='')
+
+@app.get("/books/", status_code=status.HTTP_200_OK)
+async def read_book_by_rating(book_rating: int = Query(gt=0, lt=6)):
+    books_to_return = []
+    for book in BOOKS:
+        if book.rating == book_rating:
+            books_to_return.append(book)
+    return books_to_return
+
+
 
 @app.post("/create-book", status_code=status.HTTP_201_CREATED)
 async def create_book(book_request: BookRequest):
@@ -69,3 +85,66 @@ async def create_book(book_request: BookRequest):
 def find_book_id(book: Book):
     book.id = 1 if len(BOOKS) == 0 else BOOKS[-1].id + 1
     return book
+
+
+@app.put("/books/update_book", status_code=status.HTTP_204_NO_CONTENT)
+async def update_book(book_request: BookRequest):
+    # 检查请求中是否包含ID
+    if book_request.id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Book ID is required for an update."
+        )
+
+    book_to_update_index = -1
+    # 使用 enumerate 来同时获取索引和元素
+    for i, book_in_db in enumerate(BOOKS):
+        if book_in_db.id == book_request.id:
+            book_to_update_index = i
+            break # 找到后就跳出循环
+
+    # 如果循环结束后，索引仍然是-1，说明没有找到
+    if book_to_update_index == -1:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Book with id {book_request.id} not found"
+        )
+    
+    # 使用找到的正确索引来更新列表
+    BOOKS[book_to_update_index] = Book(**book_request.model_dump())
+    
+
+    # 对于成功的 PUT 更新，通常返回 204 No Content，表示成功但无需返回任何内容。
+    # FastAPI 会自动处理这个，因为函数没有 return 语句。
+    
+
+# HTTP_204_NO_CONTENT 这是 DELETE 操作成功的标准实践，表示服务器已成功处理请求，但响应体中没有内容返回。
+# @app.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
+# #  声明 book_id 是一个路径参数，并添加了验证规则
+# async def delete_book(book_id: int = Path(gt=0)):    
+#     book_changed = False
+#     for i in range(len(BOOKS)):
+#         if BOOKS[i].id == book_id:
+#             BOOKS.pop(i)
+#             book_changed = True
+#             break
+#     if not book_changed:
+#         raise HTTPException(status_code=404, detail='Item not found')
+
+
+@app.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_book(book_id: int = Path(gt = 0, description="要删除的图书ID")):
+    
+    global BOOKS
+    
+    original_length = len(BOOKS)
+    
+    BOOKS = [ book for book in BOOKS if book.id  != book_id ]
+    
+    if len(BOOKS) == original_length:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Book with id {book_id} not found"
+        )
+    
+    
