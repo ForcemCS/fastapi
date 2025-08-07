@@ -71,6 +71,13 @@ async def update_todo_route(db: db_dependency, id: int, todo_request: TodoReques
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Todo not found')
     
 
+@app.delete("/todo/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_todo_route(db: db_dependency, id: int):
+    delete_todo = crud.delete_tode(db=db, todo_id=id)
+    if delete_todo is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Todo not found')
+    
+
 @app.get("/")
 #db: Session 是一个类型提示。它告诉你的编辑器（如 VS Code）和代码检查工具：“db 这个变量的类型是 SQLAlchemy 的 Session”。这能给你带来非常好的代码自动补全和类型检查功能。当你输入 db. 时，编辑器就会智能地提示你 query(), add(), commit() 等方法。
 #Annotated[Session, Depends(get_db)] 是 Python 3.9+ 引入的一种更清晰的类型提示方式，它能将类型信息（Session）和 FastAPI 的元数据（Depends）优雅地结合在一起。功能上和 db: Session = Depends(get_db) 完全一样。
