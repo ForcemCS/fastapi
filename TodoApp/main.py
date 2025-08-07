@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from fastapi import FastAPI, Depends,HTTPException, status,Path
 from pydantic import BaseModel, Field
 import models
+import crud 
 from models import Todos
 from database import engine, SessionLocal # 从 database.py 导入我们创建的那个数据库引擎
 
@@ -59,26 +60,17 @@ def get_db():
 db_dependency =  Annotated[Session, Depends(get_db)]
 
 @app.post("/todo", status_code=status.HTTP_201_CREATED)
-async def create_todo(db: db_dependency , to_request: TodoRequest):
-    
-    db.add(Todos(**to_request.model_dump()))
-    db.commit()
-    
+async def create_todo_route(db: db_dependency, to_request: TodoRequest):
+    crud.create_todo(db=db, todo_data=to_request)
+    # 你甚至可以返回创建的对象，如果你在 crud 函数中 return 的话
+
 @app.put("/todo/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def update_todo(db: db_dependency, id: int, todo_request: TodoRequest):
+async def update_todo_route(db: db_dependency, id: int, todo_request: TodoRequest):
+    updated_todo = crud.update_todo(db=db, todo_id=id, todo_data=todo_request)
+    if updated_todo is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Todo not found')
     
-    todo_model = db.query(Todos).filter(Todos.id == id).first()
-    
-    if todo_model is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='')
-    
-    todo_model.title = todo_request.title
-    todo_model.description = todo_request.description
-    todo_model.priority = todo_request.priority
-    todo_model.complete = todo_request.complete
-    
-    db.add(todo_model)
-    db.commit()
+
 @app.get("/")
 #db: Session 是一个类型提示。它告诉你的编辑器（如 VS Code）和代码检查工具：“db 这个变量的类型是 SQLAlchemy 的 Session”。这能给你带来非常好的代码自动补全和类型检查功能。当你输入 db. 时，编辑器就会智能地提示你 query(), add(), commit() 等方法。
 #Annotated[Session, Depends(get_db)] 是 Python 3.9+ 引入的一种更清晰的类型提示方式，它能将类型信息（Session）和 FastAPI 的元数据（Depends）优雅地结合在一起。功能上和 db: Session = Depends(get_db) 完全一样。
@@ -90,6 +82,7 @@ async def read_all(db: Annotated[Session, Depends(get_db)]):
 
 @app.get("/todo/{id}", status_code=status.HTTP_200_OK)
 async def read_todo(db: db_dependency, id: int = Path(gt=0) ):
+    #如果数据库返回了任何结果，请把第一行数据转换成一个 Todos 的 Python 对象实例，然后返回给我。”
     todo_model = db.query(Todos).filter(Todos.id == id).first()
     
     if todo_model:
