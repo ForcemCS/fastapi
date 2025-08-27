@@ -7,6 +7,8 @@ import crud
 from models import Todos
 from database import engine, SessionLocal # 从 database.py 导入我们创建的那个数据库引擎
 
+from .auth import get_current_user
+
         
 router = APIRouter()
 
@@ -54,10 +56,12 @@ def get_db():
 
 
 db_dependency =  Annotated[Session, Depends(get_db)]
+user_dependency =  Annotated[dict, Depends(get_current_user)]
+
 
 @router.post("/todo", status_code=status.HTTP_201_CREATED)
-async def create_todo_route(db: db_dependency, to_request: TodoRequest):
-    crud.create_todo(db=db, todo_data=to_request)
+async def create_todo_route(user : user_dependency, db: db_dependency, to_request: TodoRequest):
+    crud.create_todo(db=db, todo_data=to_request, id=user['id'])
     # 你甚至可以返回创建的对象，如果你在 crud 函数中 return 的话
 
 @router.put("/todo/{id}", status_code=status.HTTP_204_NO_CONTENT)
