@@ -2,9 +2,9 @@ from sqlalchemy.orm import Session
 from models import Todos
 from pydantic import BaseModel
 
-def create_todo(db: Session, todo_data: BaseModel):
+def create_todo(db: Session, todo_data: BaseModel, id: int):
     # 将 Pydantic 模型转换为 SQLAlchemy 模型
-    new_todo = Todos(**todo_data.model_dump())
+    new_todo = Todos(**todo_data.model_dump(), owner_id=id)
     db.add(new_todo)
     db.commit()
     db.refresh(new_todo)  # 刷新对象以获取数据库生成的值，如 id
@@ -47,3 +47,4 @@ def delete_tode(db: Session , todo_id: int ):
     print(todo_to_delete)
     return todo_to_delete
     
+
