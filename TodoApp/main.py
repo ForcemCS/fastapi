@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends,HTTPException, status,Path
 import models
 import crud 
 from database import engine, SessionLocal # 从 database.py 导入我们创建的那个数据库引擎
-from routers import auth, todos
+from routers import auth, todos,admin
 
 app = FastAPI()
 
@@ -18,6 +18,12 @@ app.include_router(
     tags=["Todos"]
 )
 
+
+app.include_router(
+    admin.router, 
+    prefix="/admin",
+    tags=["Admin"] 
+)
 
 # 这是至关重要的一步，它将前面所有部分连接了起来：
 # - `models.Base`: 我们访问到 `models.py` 文件中所有继承自 `Base` 的类（即 `Users` 和 `Todos`）。

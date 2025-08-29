@@ -83,14 +83,15 @@ async def delete_todo_route(db: db_dependency, id: int):
 #Annotated[Session, Depends(get_db)] 是 Python 3.9+ 引入的一种更清晰的类型提示方式，它能将类型信息（Session）和 FastAPI 的元数据（Depends）优雅地结合在一起。功能上和 db: Session = Depends(get_db) 完全一样。
 
 # async def read_all(db: Annotated[Session, Depends(get_db)]):
-async def read_all(db: Annotated[Session, Depends(get_db)]):
-    return db.query(Todos).all()
+async def read_all(user : user_dependency, db: Annotated[Session, Depends(get_db)]):
+    return db.query(Todos).filter(Todos.owner_id  == user.get('id')).all()
 
 
 @router.get("/todo/{id}", status_code=status.HTTP_200_OK)
-async def read_todo(db: db_dependency, id: int = Path(gt=0) ):
+async def read_todo(user : user_dependency, db: db_dependency, id: int = Path(gt=0) ):
     #如果数据库返回了任何结果，请把第一行数据转换成一个 Todos 的 Python 对象实例，然后返回给我。”
-    todo_model = db.query(Todos).filter(Todos.id == id).first()
+    todo_model = db.query(Todos).filter(Todos.id == id).\
+    filter(Todos.owner_id  == user.get('id')).first()
     
     if todo_model:
         return todo_model
